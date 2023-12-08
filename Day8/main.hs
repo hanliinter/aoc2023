@@ -1,8 +1,6 @@
 module Main where
 import Data.Char
 import Data.Functor
-import Debug.Trace
-import Control.DeepSeq
 wordsWhile :: (a->Bool) -> [a] -> [[a]]
 wordsWhile p xs = case dropWhile p xs of
                     [] -> []
@@ -18,7 +16,7 @@ trim = f . f
 
 
 main :: IO ()
-main = readFile "input.txt" <&> lines <&> filter (/= "") <&> solvePart2 <&> show >>= putStrLn
+main = readFile "sample3.txt" <&> lines <&> filter (/= "") <&> solvePart1' <&> show >>= putStrLn
 solvePart1 :: [String] -> Int
 solvePart1 (directions:maps) = let dict = map makeConnection maps
                                in
@@ -26,6 +24,21 @@ solvePart1 (directions:maps) = let dict = map makeConnection maps
    where go (x:xs) dict result@(r:rest) = if step dict r x == "ZZZ"
                                           then result
                                           else go xs dict ((step dict r x):result)
+
+
+
+solvePart1' :: [String] -> Int
+solvePart1' (directions:maps) = let dict = map makeConnection maps
+                                    startList = filter (isTarget) $ map fst $  map makeConnection maps
+                                    startList' = ["FPZ","ZZZ","FNZ","PKZ", "DPZ","TVZ"]
+                                    direct = cycle directions
+                               in
+                                 foldr (lcm) 1 $ map (\x -> go direct dict 0 x) startList
+  where    go ::String -> [(String,(String,String))] -> Int -> String -> Int
+           go (x:xs) dict result node = if isTarget $ step dict node x 
+                                          then result +1
+                                          else go xs dict (result+1) (step dict node x)
+
 
 makeConnection :: String -> (String, (String,String))
 makeConnection str = let source = trim $ head $ wordsWhile (== '=') str
@@ -45,22 +58,12 @@ step dict node direction = case lookup node dict of
 
 
 
+
+
+
 isSource = checkNode (=='A')
 isTarget = checkNode (=='Z')
 checkNode :: (Char->Bool) ->String -> Bool
 checkNode _ [] = error "should be a valid string"
 checkNode p xs = p $ last xs
 
-solvePart2 :: [String] -> Int
-solvePart2 (directions:maps) = let dict = map makeConnection maps
-                                   startList = filter (isSource) $map fst dict 
-                               in
-                                  go (cycle directions) dict startList 0
-   where go (x:xs) dict r result = if all isTarget $ stepN dict r x
-                                          then result+1
-                                          else go xs dict (stepN dict r x) result+1
-
-
-
-stepN ::[(String,(String,String))] -> [String] -> Char -> [String]
-stepN dict nodes direction = force $ map (\x -> step dict x direction) nodes
