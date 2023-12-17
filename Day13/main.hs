@@ -66,7 +66,7 @@ canFlipWithSmudge xs i | i >= length xs || i <= 0 = False
                     | otherwise =   let pre = reverse $ take i xs
                                         suff = drop i xs
                                         l = length $ filter (/= 0) $ zipWith (xor) pre suff
-                                        diff = abs $ head $ filter (/= 0) $ zipWith (xor) pre suff
+                                        diff =  head $ filter (/= 0) $ zipWith (xor) pre suff
                                     in
                                      if l /= 1 then False
                                      else if isExpOfTwo diff then True else False
