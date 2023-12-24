@@ -59,11 +59,31 @@ move (p@(x,y),d,s) d' m n = if d == d' then
                                   x' = x + dx
                                   y' = y + dy
                                 in
-                                  if isValid (x',y') m n then traceShow (show dx)  $ [((x',y'),d',1)] else []
+                                  if isValid (x',y') m n then  [((x',y'),d',1)] else []
+
+
+
+movePart2 :: Node -> Direction -> Int -> Int  -> [Node]
+movePart2 (p@(x,y),Start,s) d' m n = let (dx,dy) = delta d'
+                                         x' = x + dx
+                                         y' = y + dy
+                                     in
+                                       [((x',y'),d',1)]
+movePart2 (p@(x,y),d,s) d' m n = let (dx,dy) = delta d'
+                                     x' = x + dx
+                                     y' = y + dy
+                                  in
+--                                   if d == Start then
+                                   if s <4 then
+                                     if d /= d' then [] else if isValid (x',y') m n then [((x',y'),d',(s+1))] else []
+                                   else
+                                     if d /= d'
+                                     then if isValid (x',y') m n then  [((x',y'),d',1)] else []
+                                     else if s == 10 then [] else if isValid (x',y') m n then [((x',y'),d',(s+1))] else []
 
 
 findNeibours :: Node -> Int -> Int -> [Node]
-findNeibours curr@(p,d,s) m n = traceShowId $ concatMap (\i -> move curr i m n) $ turn d
+findNeibours curr@(p,d,s) m n = concatMap (\i -> movePart2 curr i m n) $ turn d
 
 
                                   
@@ -101,8 +121,16 @@ findNeibours curr@(p,d,s) m n = traceShowId $ concatMap (\i -> move curr i m n) 
 readInt :: String -> Int
 readInt = read
 
+pathToList :: (Node,Path) -> [Node]
+pathToList p = go p []
+   where go (c,p) result =  case Map.lookup c p of
+                              Nothing -> error "Should not happen"
+                              Just next@(c',_,_)  -> if c' == (0,0) then result else go (next,p) (next:result)
+                    
+
+
 main :: IO ()
-main = readFile "sample.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
+main = readFile "input.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
 --grid = Map.fromList $ concatMap (\(i,s) -> map (\(j,c)-> ((i,j),c)) $ zip [0..] s) $ zip [0..] contents
 --solvePart1 ::
 --solvePart1 :: [String] -> Path
@@ -113,8 +141,8 @@ solvePart1 content = let grid = Map.fromList $ concatMap (\(i,s) -> map (\(j,c) 
                      in
                        --pathToList  (solve grid m n)  (0,0) ((n-1),(m-1))
                        --calc grid $ tail $ pathToList (solve grid m n)  (0,0) ((n-1),(m-1))
-                       --path
                        path
+                       --pathToList path
                        --(n,m)
 
 
@@ -135,24 +163,26 @@ solve grid m n = let distance = Map.insert ((0,0),Start,0) 0 $ Map.fromList $ co
                    
   where
     --go:: Int -> Int -> Queue -> Distance -> Path -> Path
-    go grid m n queue distance path seen = if PQ.null queue then distance
-                                      else
-                                        let (current@(_,currentNode),queue') = PQ.deleteFindMin queue
-                                            ns = findNeibours currentNode m n
-                                            (_,_,newQueue,newDistance,newPath,newSeen) = foldl' relaxing (current,grid,queue',distance,path,seen) ns
-                                        in
-                                          go grid m n newQueue newDistance newPath newSeen
+    go grid m n queue distance path seen = --if PQ.null queue then distance else
+                                           let (current@(v,currentNode@(cp,cd,c)),queue') = PQ.deleteFindMin queue
+                                                
+                                               ns = findNeibours currentNode m n
+                                               (_,_,newQueue,newDistance,newPath,newSeen) = foldl' relaxing (current,grid,queue',distance,path,seen) ns
+                                           in
+                                             if cp == (n-1,m-1) && n >=4   then v -- (currentNode,path)
+                                             else
+                                               go grid m n newQueue newDistance newPath newSeen
 
 
 --relaxing ::(Node, Graph, Queue, Distance,Path) -> Node -> ((Int,(Pos,Direction)), Graph, Queue, Distance,Path)
 relaxing (current,grid,queue,distance,path,seen) next = let (currentVal,currentNode) = current
                                                             (pos,_,_) = next 
-                                                            currentDist = case Map.lookup currentNode distance of
-                                                                            Nothing -> error $ "could not find the" ++ show currentNode ++"in [distance], should not happen"
-                                                                            Just dist  -> dist
-                                                            targetVal = case Map.lookup next distance of
-                                                                          Nothing -> maxBound
-                                                                          Just val  -> val
+                                                            -- currentDist = case Map.lookup currentNode distance of
+                                                            --                 Nothing -> error $ "could not find the" ++ show currentNode ++"in [distance], should not happen"
+                                                            --                 Just dist  -> dist
+                                                            -- targetVal = case Map.lookup next distance of
+                                                            --               Nothing -> maxBound
+                                                            --               Just val  -> val
                                                             weight =  case Map.lookup pos grid of
                                                                                   Nothing -> error "could not find the val of grid, should not happen"
                                                                                   Just w -> w
@@ -160,17 +190,13 @@ relaxing (current,grid,queue,distance,path,seen) next = let (currentVal,currentN
 
                                                                in
                                                                  if Set.member next seen then (current,grid,queue,distance,path,seen)  else
-                                                        
-                                                                   if currentDist + weight < targetVal then
-                                                                     let newVal = currentDist + weight
+                                                                     let newVal = currentVal + weight
                                                                          queue' = PQ.insert newVal next queue
                                                                          distance' = Map.insert next newVal distance
                                                                          path' = Map.insert next currentNode path
                                                                          seen' = Set.insert next seen
                                                                      in
                                                                        (current,grid,queue',distance',path',seen')
-                                                                   else
-                                                                     (current,grid,queue,distance,path,seen)
 
        
                                                           
