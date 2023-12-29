@@ -3,6 +3,7 @@ module Main where
 import Data.Functor
 import Data.List (foldl')
 import Data.Maybe (fromMaybe)
+import Debug.Trace
 import qualified Data.Map as Map
 import Control.Monad.State
 
@@ -83,8 +84,10 @@ handlePulse :: Machine ()
 handlePulse = do
   (dict,queue,counts@(low,high),buttonPressed) <- get
   if isEmpty queue then
-    if all (isInitial) $ map snd $ Map.toList dict then return ()
-    else put (dict,singleton (Event "button" Low "broadcaster"), counts,(buttonPressed +1) ) >> handlePulse
+    -- if all (isInitial) $ map snd $ Map.toList dict then return ()
+    -- else put (dict,singleton (Event "button" Low "broadcaster"), traceShowId counts,(buttonPressed +1) ) >> handlePulse
+    if buttonPressed == 1000 then return ()
+    else put (dict,singleton (Event "button" Low "broadcaster"), traceShowId counts,(buttonPressed +1) ) >> handlePulse
   else
     let (e,queue') = pop queue
         (Event from p name) = e
@@ -98,6 +101,32 @@ handlePulse = do
    in
     put (dict',newQueue,(low+dl,high+dh),buttonPressed) >>
     handlePulse
+
+
+
+
+handlePulsePart2 :: Machine ()
+handlePulsePart2 = do
+  (dict,queue,counts@(low,high),buttonPressed) <- get
+  if isEmpty queue then
+    -- if all (isInitial) $ map snd $ Map.toList dict then return ()
+    -- else put (dict,singleton (Event "button" Low "broadcaster"), traceShowId counts,(buttonPressed +1) ) >> handlePulse
+    --if buttonPressed == 1000 then return ()
+     put (dict,singleton (Event "button" Low "broadcaster"), traceShowId $ counts,(buttonPressed +1) ) >> handlePulsePart2
+  else
+    let (e,queue') = pop queue
+        (Event from p name) = e
+        m = case Map.lookup name dict of
+              Nothing -> error $ "Should not happen" ++ show name
+              Just m -> m
+        (m',events) = process name m (from, p)
+        dict' = Map.insert name m' dict
+        (dl,dh) = countEventPulse e
+        newQueue = pushList queue' $ fromMaybe [] events
+   in
+   if from == "ng" && p == High && name == "xm" then return () else
+    put (dict',newQueue,(low+dl,high+dh),buttonPressed) >>
+    handlePulsePart2
 
 
 realName :: String -> String
@@ -136,7 +165,7 @@ prepareMachine dict contents = foldl' go dict contents
   
 
 main :: IO ()
-main = readFile "input.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
+main = readFile "input.txt" <&> lines <&> solvePart2 <&> show >>= putStrLn
 -- solvePart1 :: [String] -> [Module]
 solvePart1 contents = let basicModule = extractBasicModule contents 
                           modules = Map.insert "button" Button $ Map.insert "output" Output $ prepareMachine basicModule contents
@@ -144,4 +173,13 @@ solvePart1 contents = let basicModule = extractBasicModule contents
                           (_,_,(low,high),buttonPressed) = execState handlePulse (modules,pressButton,(0,0),1)
                           cycles = 1000 `div` buttonPressed
                       in
-                        product [low, cycles,high,cycles]
+                       -- product [low, cycles,high,cycles]
+                        low * high
+solvePart2 contents = let basicModule = extractBasicModule contents 
+                          modules = Map.insert "button" Button $ Map.insert "output" Output $ prepareMachine basicModule contents
+                          pressButton = singleton (Event "button" Low "broadcaster")
+                          (state,queue,(low,high),buttonPressed) = execState handlePulsePart2 (modules,pressButton,(0,0),1)
+                          cycles = 1000 `div` buttonPressed
+                      in
+                       -- product [low, cycles,high,cycles]
+                        (queue, buttonPressed)
