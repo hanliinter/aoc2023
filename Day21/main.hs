@@ -135,14 +135,39 @@ solve grid size start step = go []  [start] grid size step 0
 markPosVector :: [String] -> Vector.Vector Char
 markPosVector contents = Vector.concat $ map (Vector.fromList) contents
 
+-- Solution from https://www.youtube.com/watch?v=9UOMZSL0JTg, wondering if we can have better solution which use the symmetry property
 
 solvePart2 contents = let vgrid = markPosVector contents
                           grid = markPos contents
                           n = length contents
+                          step = 26501365
                           start = fst $ head $ filter ((=='S').snd) grid
-                          
+                          (x,y) = start
                           seen = Vector.map (\_ -> False) vgrid
+                          odd_grid_number = evalState (solveState vgrid n (n*2+1) start) seen
+                          even_grid_number = evalState (solveState vgrid n (n*2) start) seen
+                          grid_num = step `div` n -1
+                          odd_grid = (grid_num ) ^ 2
+                          even_grid = (grid_num+1) ^2
+                          corner_t = evalState (solveState vgrid n (n-1) (n-1,y)) seen
+                          corner_r = evalState (solveState vgrid n (n-1) (x,0)) seen
+                          corner_b = evalState (solveState vgrid n (n-1) (0,y)) seen
+                          corner_l = evalState (solveState vgrid n (n-1) (x,n-1)) seen
+
+                          small_tr = evalState (solveState vgrid n (n `div` 2 -1) (n-1,0)) seen
+                          small_br = evalState (solveState vgrid n (n `div` 2 -1) (0,0)) seen
+                          small_tl = evalState (solveState vgrid n (n `div` 2 -1) (n-1,n-1)) seen
+                          small_bl = evalState (solveState vgrid n (n `div` 2 -1) (0,n-1)) seen
+
+                          small_sum = (grid_num +1) * (small_tr + small_br + small_tl + small_bl)
+
+                          large_tr = evalState (solveState vgrid n (n*3 `div` 2 -1) (n-1,0)) seen
+                          large_br = evalState (solveState vgrid n (n*3 `div` 2 -1) (0,0)) seen
+                          large_tl = evalState (solveState vgrid n (n*3 `div` 2 -1) (n-1,n-1)) seen
+                          large_bl = evalState (solveState vgrid n (n*3 `div` 2 -1) (0,n-1)) seen
+                          large_sum = (grid_num) * (large_tr + large_br + large_tl + large_bl)
                       in
                         --solve grid n start 132
                         --solveState :: VGrid -> Int -> Int -> Pos -> Graph Int
-                        evalState (solveState vgrid n 64 start) seen
+                        --(odd_grid_number,even_grid_number)
+                        sum [odd_grid * odd_grid_number,even_grid * even_grid_number, corner_t, corner_r, corner_b,corner_l,small_sum,large_sum]
