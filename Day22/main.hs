@@ -6,7 +6,7 @@ import Data.List
 import qualified Data.Map as Map
 
 main :: IO ()
-main = readFile "sample.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
+main = readFile "input.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
 type Endpoint = (Int,Int,Int)
 
 
@@ -41,8 +41,8 @@ overlap (x1s,x1e) (x2s,x2e) (y1s,y1e) (y2s,y2e) = (max x1s x2s) <= (min x1e x2e)
 isSupporting :: Brick -> Brick -> Bool
 isSupporting brickA brickB = overlapBrick brickA brickB && getHighZ brickA +1 == getLowZ brickB
 
-getLowZ (Brick (_,_,z) _) = z
-getHighZ (Brick _ (_,_,z)) = z
+getLowZ (Brick (_,_,z1) (_,_,z2)) = min z1 z2
+getHighZ (Brick (_,_,z1) (_,_,z2)) = max z1 z2
 
 fallDown :: [Brick] -> [Brick]
 fallDown bricks = let  
@@ -101,15 +101,15 @@ isSingleAxisChange str = let firstEnd = map read $ wordsWhile (==',') $ head $ w
 
 
 solvePart1 contents = let bricks =  map (readBrick) contents
-                          getZ (Brick (_,_,z) _) = z
-                          comp = (flip compare) `on` getZ
+                          
+                          comp = (flip compare) `on` getLowZ
                           (supportBy, support) =  findSupportingBelow $ fallDown bricks
                           
                       in
                         --markBrick $ fallDown bricks
                        --supportBy
                       -- support
-                       filter (\b -> go b supportBy support) $ fallDown bricks
+                       length $ nub $ sort $ filter (\b -> go b supportBy support) $ fallDown bricks
                        
                        
                        -- lookup brick  (Map.toList supportBy)
@@ -122,5 +122,4 @@ solvePart1 contents = let bricks =  map (readBrick) contents
                                       Nothing -> error $ "Should never happen" ++ show b ++ "\n" ++ show supportBy
                                       Just c -> case c of
                                         [] -> error "also should never happen"
-                                        cs -> length cs > 1
                                         cs -> length cs > 1
