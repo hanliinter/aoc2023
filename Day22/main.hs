@@ -6,8 +6,12 @@ import Data.List
 import qualified Data.Map as Map
 
 main :: IO ()
-main = readFile "input.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
+main = readFile "sample.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
 type Endpoint = (Int,Int,Int)
+
+
+-- a map that records the bricks 'support' the given brick
+type SMap = Map.Map (Int,Brick) [Brick]
 
 data Brick = Brick Endpoint Endpoint deriving (Show, Eq)
 
@@ -34,17 +38,20 @@ overlapBrick (Brick (x1,y1,z1) (x2,y2,z2)) (Brick (x1',y1',z1') (x2',y2',z2')) =
 overlap :: (Int,Int) -> (Int,Int) -> (Int,Int) -> (Int,Int) -> Bool
 overlap (x1s,x1e) (x2s,x2e) (y1s,y1e) (y2s,y2e) = (max x1s x2s) <= (min x1e x2e) && (max y1s y2s) <= (min y1e y2e) 
 
--- isSupporting :: Brick -> Brick -> Bool
--- isSupporting  (x1,y1,z1) (x2,y2,z2) = 
+isSupporting :: Brick -> Brick -> Bool
+isSupporting brickA brickB = overlapBrick brickA brickB && getHighZ brickA +1 == getLowZ brickB
+
+getLowZ (Brick (_,_,z) _) = z
+getHighZ (Brick _ (_,_,z)) = z
 
 fallDown :: [Brick] -> [Brick]
-fallDown bricks = let  getLowZ (Brick (_,_,z) _) = z
+fallDown bricks = let  
                        comp = compare `on` getLowZ
                        sorted = sortBy comp bricks
                     in
                     
                      foldl go [] sorted
-      where getHighZ (Brick _ (_,_,z)) = z
+      where 
             go :: [Brick] -> Brick -> [Brick]
             go [] current = [downTo 1 current]
             go stable current  = let l = filter (overlapBrick current) stable
@@ -59,10 +66,23 @@ fallDown bricks = let  getLowZ (Brick (_,_,z) _) = z
             insert x (y:ys) = if x <=y
                               then x:y:ys
                               else y: insert x ys
+
+
+
+markBrick :: [Brick] -> Map.Map Brick Int
+markBrick bricks = Map.fromList $ zip bricks [0..]
             
-            
-            
-            
+findSupportingBelow :: [Brick] -> (Map.Map Brick [Brick],Map.Map Brick [Brick])
+findSupportingBelow bricks = let support = Map.fromList $ map (\x -> (x,[])) bricks in
+                                   go [] bricks (Map.empty,Map.empty)
+  where go prev [] (dict,support) = (dict,support)
+        go prev (a:rest) (dict,support)  = let --(i,a') = a
+                                     cs = filter (`isSupporting` a) prev
+                                     dict' = Map.insert a cs dict
+                                     support' = foldl' (prepare a) support cs
+                                  in
+                                   go (a:prev) rest (dict', support')
+        prepare a support c = Map.insertWith (++) c [a] support
 
 
 wordsWhile :: (a->Bool) -> [a] -> [[a]]
@@ -82,6 +102,25 @@ isSingleAxisChange str = let firstEnd = map read $ wordsWhile (==',') $ head $ w
 
 solvePart1 contents = let bricks =  map (readBrick) contents
                           getZ (Brick (_,_,z) _) = z
-                          comp = (flip compare) `on` getZ 
+                          comp = (flip compare) `on` getZ
+                          (supportBy, support) =  findSupportingBelow $ fallDown bricks
+                          
                       in
-                        fallDown bricks
+                        --markBrick $ fallDown bricks
+                       --supportBy
+                      -- support
+                       filter (\b -> go b supportBy support) $ fallDown bricks
+                       
+                       
+                       -- lookup brick  (Map.toList supportBy)
+    where go b supportBy support = case lookup b (Map.toList $ support) of
+                                     Nothing -> True -- error $ "should never happen" ++ show b ++ (show $ Map.toList support)
+                                     Just c -> case c of
+                                       [] -> True
+                                       xs -> all (\b' -> go' b' supportBy) xs
+          go' b supportBy  = case lookup b (Map.toList supportBy) of
+                                      Nothing -> error $ "Should never happen" ++ show b ++ "\n" ++ show supportBy
+                                      Just c -> case c of
+                                        [] -> error "also should never happen"
+                                        cs -> length cs > 1
+                                        cs -> length cs > 1
