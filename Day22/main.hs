@@ -2,9 +2,11 @@ module Main where
 import Control.Monad
 import Data.Functor
 import Data.Function
-import Data.List
+import Data.List (sort,intersperse,sortBy,foldl')
+import Data.Maybe
 import Debug.Trace
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 main :: IO ()
 main = readFile "input.txt" <&> lines <&> solvePart2 <&> show >>= putStrLn
@@ -141,7 +143,59 @@ solvePart1 contents = let bricks =  map (readBrick) contents
                                         cs -> length cs > 1
 
 
+
+
+
 solvePart2 contents = let bricks =  map (readBrick) contents
                           (supportBy, support) =  findSupportingBelow $ fallDown bricks
                       in
-                        supportBy
+                        
+                       sum $ map (\x -> findCandidate x supportBy support) $ fallDown bricks
+                        --go (fallDown bricks) supportBy support 0
+
+
+newtype Queue a = Queue ([a],[a])
+
+push :: Eq a => Queue a -> a -> Queue a
+push (Queue (a,b)) n = Queue (a, (n:b))
+
+pushList :: Eq a => Queue a -> [a] -> Queue a
+pushList (Queue (a,b)) b' = Queue (a, reverse b' ++ b)
+
+pop :: Eq a => Queue a-> (a,Queue a)
+pop (Queue (a,b)) = if a == [] then (head $ reverse b,Queue ((tail $ reverse b),[] ))
+                       else (head a, Queue (tail a, b))
+
+instance Functor Queue where
+  fmap f (Queue (a,b)) = Queue (map f a, map f b) 
+
+empty::Eq a => Queue a
+empty = Queue ([],[])
+
+isEmpty :: Eq a => Queue a -> Bool
+isEmpty (Queue (a,b)) = a == [] && b == []
+
+singleton :: Eq a => a -> Queue a
+singleton a = Queue ([a],[])
+
+
+
+--findCandidate :: Brick -> Map.Map Brick [Brick] -> Map.Map Brick [Brick] -> Int
+findCandidate b supportBy support = go (singleton b) supportBy support Set.empty
+  where go queue supportBy support set  = if isEmpty queue then Set.size set -1
+                                            else
+                                              let (b,queue') = pop queue
+                                                  set' = Set.insert b set
+                                                  bSupports = fromJust $ Map.lookup b support
+                                                  (finalSet, finalQueue)  =  foldl' (checkSupporting supportBy support) (set',queue') bSupports
+                                               in
+                                                go finalQueue supportBy support finalSet
+        checkSupporting supportBy support (removingSet,queue) u = let theBricksSupportingU = fromJust $ Map.lookup u supportBy
+                                                           in
+                                                            if all (`Set.member` removingSet) theBricksSupportingU then
+                                                              let removingSet' = Set.insert u removingSet
+                                                                  queue' = push queue u
+                                                              in
+                                                                (removingSet',queue')
+                                                            else
+                                                              (removingSet,queue)
