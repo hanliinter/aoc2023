@@ -7,13 +7,8 @@ import Debug.Trace
 import qualified Data.Map as Map
 
 main :: IO ()
-main = readFile "input.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
+main = readFile "input.txt" <&> lines <&> solvePart2 <&> show >>= putStrLn
 
--- main :: IO ()
--- main = do
---   str <- readFile "input.txt" <&> lines <&> solvePart1
---   putStrLn $ str
---   return ()
 
 type Endpoint = (Int,Int,Int)
 
@@ -83,13 +78,6 @@ fallDown bricks = let
             go :: [Brick] -> Brick -> [Brick]
             go stable current  = let l = filter (overlapBrick current) stable
                                   in
-                                   -- if current == Brick (4,8,7) (5,8,7) then traceShow l $
-                                   --  case l of
-                                   --            [] -> insert (downTo 1 current) stable 
-                                   --            stable' -> let h = maximum $ map getHighZ stable'
-                                   --                       in
-                                   --                        traceShowId (insert (downTo (h +1) current) stable)
-                                   -- else
                                             case l of
                                               [] -> insert (downTo 1 current) stable
                                               stable' -> let h = maximum $ map getHighZ stable'
@@ -138,14 +126,9 @@ isSingleAxisChange str = let firstEnd = map read $ wordsWhile (==',') $ head $ w
 solvePart1 contents = let bricks =  map (readBrick) contents
                           (supportBy, support) =  findSupportingBelow $ fallDown bricks
                       in
---                        map showBrick $ fallDown bricks
-                      --  fallDown bricks
-                       --supportBy
-                      -- support
                      length $ filter (\b -> go b supportBy support) $ fallDown bricks
                        
                        
-                       -- lookup brick  (Map.toList supportBy)
     where go b supportBy support = case Map.lookup b  support of
                                      Nothing -> error $ "should never happen" ++ show b ++ (show $ Map.toList support)
                                      Just c -> case c of
@@ -156,3 +139,9 @@ solvePart1 contents = let bricks =  map (readBrick) contents
                                       Just c -> case c of
                                         [] -> error "also should never happen"
                                         cs -> length cs > 1
+
+
+solvePart2 contents = let bricks =  map (readBrick) contents
+                          (supportBy, support) =  findSupportingBelow $ fallDown bricks
+                      in
+                        supportBy
