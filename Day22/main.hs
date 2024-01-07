@@ -145,6 +145,25 @@ solvePart1 contents = let bricks =  map (readBrick) contents
 
 
 
+--findCandidate :: Brick -> Map.Map Brick [Brick] -> Map.Map Brick [Brick] -> Int
+findCandidate b supportBy support = go (singleton b) supportBy support Set.empty
+  where go queue supportBy support set  = if isEmpty queue then Set.size set -1
+                                            else
+                                              let (b,queue') = pop queue
+                                                  set' = Set.insert b set
+                                                  bSupports = fromJust $ Map.lookup b support
+                                                  (finalSet, finalQueue)  =  foldl' (checkSupporting supportBy support) (set',queue') bSupports
+                                               in
+                                                go finalQueue supportBy support finalSet
+        checkSupporting supportBy support (removingSet,queue) u = let theBricksSupportingU = fromJust $ Map.lookup u supportBy
+                                                           in
+                                                            if all (`Set.member` removingSet) theBricksSupportingU then
+                                                              let removingSet' = Set.insert u removingSet
+                                                                  queue' = push queue u
+                                                              in
+                                                                (removingSet',queue')
+                                                            else
+                                                              (removingSet,queue)
 
 solvePart2 contents = let bricks =  map (readBrick) contents
                           (supportBy, support) =  findSupportingBelow $ fallDown bricks
@@ -180,22 +199,3 @@ singleton a = Queue ([a],[])
 
 
 
---findCandidate :: Brick -> Map.Map Brick [Brick] -> Map.Map Brick [Brick] -> Int
-findCandidate b supportBy support = go (singleton b) supportBy support Set.empty
-  where go queue supportBy support set  = if isEmpty queue then Set.size set -1
-                                            else
-                                              let (b,queue') = pop queue
-                                                  set' = Set.insert b set
-                                                  bSupports = fromJust $ Map.lookup b support
-                                                  (finalSet, finalQueue)  =  foldl' (checkSupporting supportBy support) (set',queue') bSupports
-                                               in
-                                                go finalQueue supportBy support finalSet
-        checkSupporting supportBy support (removingSet,queue) u = let theBricksSupportingU = fromJust $ Map.lookup u supportBy
-                                                           in
-                                                            if all (`Set.member` removingSet) theBricksSupportingU then
-                                                              let removingSet' = Set.insert u removingSet
-                                                                  queue' = push queue u
-                                                              in
-                                                                (removingSet',queue')
-                                                            else
-                                                              (removingSet,queue)
