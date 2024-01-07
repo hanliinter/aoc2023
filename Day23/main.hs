@@ -48,23 +48,22 @@ getExits grid n = map fst $ filter (\((x,y),c) -> (x == 0 && c == '.') || (x == 
 
 
 type Edges = Map Pos [(Pos,Int)]
-findEdges :: [Pos] -> Grid -> Int -> Int -> Edges
-findEdges points grid n m = go points [(head points,0)] grid n m Set.empty Map.empty
+findEdges :: Pos ->[Pos] -> Grid -> Int -> Int -> Edges
+findEdges pts points grid n m = go points pts [(pts,0)] grid n m Set.empty Map.empty
                             
-  where go :: [Pos] -> [(Pos,Int)] -> Grid -> Int ->Int -> Set.Set Pos -> Edges -> Edges
-        go points queue grid n m seen result = if null queue then result
-                                               else
-                                                 let (h@(p,c):rest) = queue
-                                                     neibours = getValidNeibours p grid n m
-                                                     nextPos =  filter (\x -> not (x `Set.member` seen)) neibours
-                                                     nextNode =  map (\p -> (p,c+1)) $ nextPos
-                                                     
-                                                     newSeen =  Set.union seen $ Set.fromList nextPos
-                                                     nextNode' = (filter (\(p,c) -> p `elem` points) nextNode)
-                                                     newQueue = nextNode ++ rest --if null nextNode' then rest else nextNode' ++ rest
-                                                     newResult = if null nextNode' then result else Map.insert p nextNode' result
-                                                 in
-                                                    go points newQueue grid n m newSeen newResult
+  where go :: [Pos] ->Pos -> [(Pos,Int)] -> Grid -> Int ->Int -> Set.Set Pos -> Edges -> Edges
+        go points pt queue grid n m seen result = if null queue then result
+                                                  else
+                                                    let (h@(p,c):rest) = queue
+                                                        neibours = getValidNeibours p grid n m
+                                                        nextPos =  filter (\x -> not (x `Set.member` seen)) neibours
+                                                        nextNode =  map (\p -> (p,c+1)) $ nextPos
+                                                        newSeen =  Set.insert p $ Set.union seen $ Set.fromList nextPos
+                                                        nextNode' = (filter (\(p,c) -> p `elem` points) nextNode)
+                                                        newQueue = if null nextNode' then nextNode ++ rest else rest
+                                                        newResult = if null nextNode' then result else Map.insertWith (++) pt nextNode' result
+                                                    in
+                                                      go points pt newQueue grid n m newSeen newResult
 
 
 solvePart1 contents = let grid = markPos contents
@@ -73,7 +72,7 @@ solvePart1 contents = let grid = markPos contents
                           inout = getExits grid n
                           pts = inout ++ getKeyPoints grid n m
                        in
---                        sort $ 
+                        
                        -- pts
-                        findEdges pts grid n m 
+                        map (\x -> findEdges x pts grid n m ) pts
                         --getNeibours (19,19) grid n m 
