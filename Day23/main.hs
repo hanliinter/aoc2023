@@ -66,6 +66,13 @@ findEdges pts points grid n m = go points pts [(pts,0)] grid n m Set.empty Map.e
                                                       go points pt newQueue grid n m newSeen newResult
 
 
+dfs :: Edges -> [Pos] -> Set Pos -> Pos -> Pos -> Int
+dfs edge pts seen p end | p == end = 0
+                        | otherwise =
+                          
+                             
+
+
 solvePart1 contents = let grid = markPos contents
                           n = length contents
                           m = length $ head contents
@@ -73,6 +80,8 @@ solvePart1 contents = let grid = markPos contents
                           pts = inout ++ getKeyPoints grid n m
                        in
                         
-                       -- pts
+                       
                         map (\x -> findEdges x pts grid n m ) pts
-                        --getNeibours (19,19) grid n m 
+                        
+-- use brute force
+-- use toplogical sort then DFS
