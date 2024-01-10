@@ -143,7 +143,7 @@ relaxing (current,grid,queue,distance,path,seen) (pos,dirs,val) = let (currentVa
 
 
                                                                in
-                                                                 if Set.member (pos,d) seen then (current,grid,queue,distance,path,seen)  else
+                                                                 --if Set.member (pos,d) seen then (current,grid,queue,distance,path,seen)  else
                                                         
                                                                    if currentDist + weight < targetVal  && isValid (dirs ++ currentDirections) then
                                                                      let newVal = currentDist + weight
