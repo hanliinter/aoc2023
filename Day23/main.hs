@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 module Main where
 import Debug.Trace
 import Data.Functor
@@ -7,8 +8,9 @@ import Data.Map(Map)
 import qualified Data.Map as Map
 import Data.Set(Set)
 import qualified Data.Set as Set
+import Control.Monad.State
 main :: IO ()
-main = readFile "sample.txt" <&> lines <&> solvePart2 <&> show >>= putStrLn
+main = readFile "input.txt" <&> lines <&> solvePart2 <&> show >>= putStrLn
 
 type Pos = (Int,Int)
 type Grid = [(Pos,Char)]
@@ -94,7 +96,26 @@ dfs edge pts start end = go edge pts [] start end 0
                                                      results = map (\(p,n) -> go edges pts (current:path) p end (result + n)) targets
                                                  in
                                                    maximum results
-                                                 
+
+
+type Seen = Set Pos
+dfsState :: Edges -> [Pos] -> Pos -> Pos -> State ([Pos], Int,Seen) ()
+dfsState edge pts start end = go edge pts start end 0 
+  where go edges pts current end result = do
+                                               (pos,currMax,seen) <- get
+                                               let seen' = Set.insert current seen
+                                               if current `Set.member` seen then return () else
+                                                 if current == end then do
+                                                  
+                                                  if result > currMax then put (current:pos,result,seen)  else return ()
+                                               else
+                                                do
+                                                 let targets = fromJust $ Map.lookup current edges
+                                                 put ((current:pos),currMax,seen') 
+                                                 mapM_  (\(p,n) -> go edges pts p end (result + n)) targets
+                                                 (pos',currMax',_) <- get
+                                                 put (pos',currMax',seen)
+
 
                           
                              
@@ -117,9 +138,10 @@ solvePart2 contents = let grid = markPos contents
                           inout = getExits grid n
                           pts = inout ++ getKeyPoints grid n m
                           edge =  Map.unions $ map (\x -> findEdges' x pts grid n m ) pts
+                          (_,i,_) = execState (dfsState edge pts (head inout) (head $ tail inout)) ([],0,Set.empty)
 
                        in
-                        dfs edge pts (head inout) (head $ tail inout)
+                        i
                         --edge
                         
 -- use brute force
