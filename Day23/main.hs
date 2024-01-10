@@ -8,7 +8,7 @@ import qualified Data.Map as Map
 import Data.Set(Set)
 import qualified Data.Set as Set
 main :: IO ()
-main = readFile "sample.txt" <&> lines <&> solvePart1 <&> show >>= putStrLn
+main = readFile "sample.txt" <&> lines <&> solvePart2 <&> show >>= putStrLn
 
 type Pos = (Int,Int)
 type Grid = [(Pos,Char)]
@@ -66,9 +66,36 @@ findEdges pts points grid n m = go points pts [(pts,0)] grid n m Set.empty Map.e
                                                       go points pt newQueue grid n m newSeen newResult
 
 
-dfs :: Edges -> [Pos] -> Set Pos -> Pos -> Pos -> Int
-dfs edge pts seen p end | p == end = 0
-                        | otherwise =
+findEdges' :: Pos ->[Pos] -> Grid -> Int -> Int -> Edges
+findEdges' pts points grid n m = go points pts [(pts,0)] grid n m Set.empty Map.empty
+                            
+  where go :: [Pos] ->Pos -> [(Pos,Int)] -> Grid -> Int ->Int -> Set.Set Pos -> Edges -> Edges
+        go points pt queue grid n m seen result = if null queue then result
+                                                  else
+                                                    let (h@(p,c):rest) = queue
+                                                        neibours = getNeibours p grid n m
+                                                        nextPos =  filter (\x -> not (x `Set.member` seen)) neibours
+                                                        nextNode =  map (\p -> (p,c+1)) $ nextPos
+                                                        newSeen =  Set.insert p $ Set.union seen $ Set.fromList nextPos
+                                                        nextNode' = (filter (\(p,c) -> p `elem` points) nextNode)
+                                                        newQueue = if null nextNode' then nextNode ++ rest else rest
+                                                        newResult = if null nextNode' then result else Map.insertWith (++) pt nextNode' result
+                                                    in
+                                                      go points pt newQueue grid n m newSeen newResult
+
+
+
+
+dfs :: Edges -> [Pos] -> Pos -> Pos -> Int
+dfs edge pts start end = go edge pts [] start end 0 
+  where go edges pts path current end result = if current == end then result
+                                               else
+                                                 let targets = fromJust $ Map.lookup current edges
+                                                     results = map (\(p,n) -> go edges pts (current:path) p end (result + n)) targets
+                                                 in
+                                                   maximum results
+                                                 
+
                           
                              
 
@@ -78,10 +105,26 @@ solvePart1 contents = let grid = markPos contents
                           m = length $ head contents
                           inout = getExits grid n
                           pts = inout ++ getKeyPoints grid n m
+                          edge =  Map.unions $ map (\x -> findEdges x pts grid n m ) pts
+
                        in
-                        
+                        dfs edge pts (head inout) (head $ tail inout)
                        
-                        map (\x -> findEdges x pts grid n m ) pts
+                        
+solvePart2 contents = let grid = markPos contents
+                          n = length contents
+                          m = length $ head contents
+                          inout = getExits grid n
+                          pts = inout ++ getKeyPoints grid n m
+                          edge =  Map.unions $ map (\x -> findEdges' x pts grid n m ) pts
+
+                       in
+                        dfs edge pts (head inout) (head $ tail inout)
+                        --edge
                         
 -- use brute force
 -- use toplogical sort then DFS
+
+
+
+
