@@ -98,16 +98,3 @@ solvePart1 =  length . findInterPoints
 
 
 
--- a1 :: Int
--- a2 :: Int
--- b1 :: Int
--- b2 :: Int
--- c1 :: Int
--- c2 :: Int
-
-a1 = -17
-a2 = 260
-b1 = -143
-b2 = -139
-c1 = -42327649018855884
-c2 = 55112603497696986
